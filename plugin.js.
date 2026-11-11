@@ -1,0 +1,77 @@
+
+(function () {
+    'use strict';
+
+    if (window.LampaPTBRTotalV2) return;
+    window.LampaPTBRTotalV2 = true;
+
+    function isPTBR(track) {
+        var lang = String(
+            track.language || track.lang || track.id || ''
+        ).toLowerCase().replace(/_/g, '-');
+
+        var label = String(
+            track.label || track.name || ''
+        ).toLowerCase();
+
+        return /^(pt-br|pt-brasil|por-br|pob)$/.test(lang) ||
+            label.indexOf('pt-br') !== -1 ||
+            label.indexOf('português brasileiro') !== -1 ||
+            label.indexOf('português (brasil)') !== -1 ||
+            label.indexOf('brazilian portuguese') !== -1;
+    }
+
+    function selectAudio() {
+        try {
+            if (!window.Lampa ||
+                !Lampa.PlayerVideo ||
+                typeof Lampa.PlayerVideo.video !== 'function') {
+                return false;
+            }
+
+            var video = Lampa.PlayerVideo.video();
+
+            if (!video || !video.audioTracks) return false;
+
+            var tracks = video.audioTracks;
+
+            for (var i = 0; i < tracks.length; i++) {
+                if (isPTBR(tracks[i])) {
+                    tracks[i].enabled = true;
+
+                    for (var j = 0; j < tracks.length; j++) {
+                        if (j !== i) tracks[j].enabled = false;
+                    }
+
+                    console.log('[PT-BR V2] Áudio brasileiro selecionado');
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.log('[PT-BR V2]', e);
+        }
+
+        return false;
+    }
+
+    if (window.Lampa &&
+        Lampa.Player &&
+        Lampa.Player.listener) {
+
+        Lampa.Player.listener.follow('start', function () {
+            var tries = 0;
+
+            function check() {
+                tries++;
+
+                if (selectAudio() || tries >= 15) return;
+
+                setTimeout(check, 1000);
+            }
+
+            check();
+        });
+    }
+
+    console.log('[PT-BR V2] Plugin carregado');
+})();
